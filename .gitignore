@@ -1,0 +1,18 @@
+# Môi trường ảo
+.venv/
+env/
+venv/
+ENV/
+
+# Khóa bảo mật và biến môi trường
+.env
+*.env
+
+# Cache của Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Hệ điều hành Mac
+.DS_Store

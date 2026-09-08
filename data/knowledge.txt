@@ -1,0 +1,28 @@
+# Project Apollo & Lunar Exploration Knowledge Base
+
+## Mission Overview: Apollo 11
+Project Apollo was the third United States human spaceflight program carried out by NASA, which succeeded in landing the first humans on the Moon in 1969. Apollo 11 launched from Kennedy Space Center Launch Complex 39A on July 16, 1969, at 13:32 UTC. Commander Neil Armstrong and lunar module pilot Buzz Aldrin landed the Apollo Lunar Module Eagle (LM-5) on July 20, 1969, at 20:17 UTC. Commander Neil Armstrong became the first person to step onto the Moon's surface on July 21 at 02:56 UTC. Buzz Aldrin joined him 19 minutes later.
+
+The command module pilot Michael Collins flew the Command/Service Module Columbia (CSM-107) in lunar orbit while Armstrong and Aldrin were on the surface. Armstrong and Aldrin spent 21 hours 36 minutes on the lunar surface before lifting off to rejoin Columbia. Total mission duration was exactly 195 hours, 18 minutes, and 35 seconds.
+
+## Launch Vehicle: Saturn V (Serial SA-506)
+The launch vehicle used for Apollo 11 was the Saturn V rocket, serial designation SA-506. Developed at NASA's Marshall Space Flight Center under Wernher von Braun, it stood 363 feet (111 m) tall and weighed 6.2 million pounds (2.8 million kg) fully fueled. The first stage, S-IC, generated 7.5 million pounds-force (33,000 kN) of thrust using five Rocketdyne F-1 engines burning RP-1 kerosene and liquid oxygen.
+
+## Guidance System: Apollo Guidance Computer (AGC-1969)
+The Apollo Guidance Computer (model designation AGC-1969 / Block II) was designed by the MIT Instrumentation Laboratory under Hal Laning and Margaret Hamilton. The AGC provided real-time computational guidance, navigation, and spacecraft control.
+
+The hardware specifications of the Block II AGC were:
+- Memory: 2,048 words of 16-bit magnetic-core RAM (erasable memory) and 36,864 words of 16-bit core rope ROM (fixed memory).
+- Clock Speed: 1.024 MHz, derived from a 2.048 MHz master crystal oscillator.
+- Logic Architecture: Built exclusively using dual 3-input NOR gates implemented with integrated circuits (RTL logic). It consumed approximately 55 watts of power.
+
+During the lunar descent, the AGC triggered the famous 1202 and 1201 program alarms. These alarms indicated an executive overflow, meaning the computer was receiving more radar interrupts from the rendezvous radar than it had CPU cycles to service. Thanks to Margaret Hamilton's priority asynchronous executive system, the AGC discarded low-priority radar tasks and continued computing critical thruster firings and guidance equations, preventing mission abort.
+
+## Deep Space Communications: DSN-Station-43 and Parkes
+Communications between Mission Control in Houston and Apollo 11 were routed through the Deep Space Network (DSN) and collaborating radio observatories. The primary tracking stations were Goldstone in California, DSN-Station-43 at Tidbinbilla near Canberra, Australia, and the Parkes Observatory in New South Wales. The historic television broadcast of Neil Armstrong stepping onto the lunar surface was received with the best clarity by the 64-meter radio telescope at Parkes Observatory.
+
+## Geological Samples and Tranquility Base
+The landing site was named Tranquility Base (Statio Tranquillitatis), located at coordinates 0.67408° N, 23.47297° E. Armstrong and Aldrin collected 47.51 pounds (21.55 kg) of lunar rock and soil samples, including basaltic rocks and breccias. These samples revealed that lunar maria were composed of ancient volcanic basalt, devoid of water or organic compounds.
+
+## Total Program Financials and Mission Series
+Between 1960 and 1973, NASA spent $25.4 billion on the Apollo program (equivalent to roughly $153 billion in 2023 dollars adjusted for inflation). A total of six Apollo missions successfully landed humans on the Moon: Apollo 11, Apollo 12, Apollo 14, Apollo 15, Apollo 16, and Apollo 17. Apollo 17, commanded by Gene Cernan with lunar module pilot Harrison Schmitt in December 1972, marked the final human lunar landing of the 20th century.

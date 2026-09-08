@@ -1,0 +1,5 @@
+python3 main.py -> run app
+--data -> knowledge source
+--query 
+--debug 
+-m unittest -v tests_core.py -> test 
