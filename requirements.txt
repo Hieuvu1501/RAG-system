@@ -2,3 +2,10 @@ google-genai>=1.0.0
 rank-bm25>=0.2.2
 numpy>=1.24.0
 python-dotenv>=1.0.0
+torch>=2.0.0
+transformers==4.48.2
+Pillow>=9.0.0
+# Optional: decord (for video processing, requires Python 3.10+)
+# pip install decord
+# Optional: flash_attn (for GPU acceleration, requires CUDA)
+# pip install flash_attn

@@ -6,7 +6,9 @@ load_dotenv()
 
 from rag.chunker import TextChunker, Chunk
 from rag.embeddings import GeminiEmbedder
+from rag.vintern_embeddings import VinternEmbedder
 from rag.vector_store import SimpleVectorStore
+from rag.multi_vector_store import MultiVectorStore
 from rag.bm25_retriever import BM25Retriever
 from rag.fusion import reciprocal_rank_fusion, FusedResult
 from rag.reranker import CrossEncoderReranker, RerankedResult
@@ -25,13 +27,20 @@ class HybridRAGPipeline:
     3. Rank Fusion: Reciprocal Rank Fusion (RRF)
     4. Cross-Encoder Reranking: Top-N Best Chunks
     5. LLM Synthesis: Gemini grounded response generation
+
+    Supports two dense embedding backends:
+    - 'vintern': Local Vintern-Embedding-1B (ColBERT-style multi-vector, no API needed)
+    - 'gemini': Google Gemini Embedding API (single-vector cosine similarity)
     """
+
+    SUPPORTED_BACKENDS = ("vintern", "gemini")
 
     def __init__(
         self,
         api_key: Optional[str] = None,
         llm_model: Optional[str] = None,
         embedding_model: Optional[str] = None,
+        embedding_backend: Optional[str] = None,
         chunk_size: int = 400,
         chunk_overlap: int = 60,
         top_k_sparse: Optional[int] = None,
@@ -48,6 +57,17 @@ class HybridRAGPipeline:
         self.llm_model = llm_model or os.getenv("LLM_MODEL", "gemini-3.6-flash")
         self.embedding_model = embedding_model or os.getenv("EMBEDDING_MODEL", "gemini-embedding-001")
 
+        # Determine embedding backend
+        self.embedding_backend = (
+            embedding_backend
+            or os.getenv("EMBEDDING_BACKEND", "vintern")
+        ).lower()
+        if self.embedding_backend not in self.SUPPORTED_BACKENDS:
+            raise ValueError(
+                f"Unsupported EMBEDDING_BACKEND '{self.embedding_backend}'. "
+                f"Choose from: {self.SUPPORTED_BACKENDS}"
+            )
+
         self.top_k_sparse = top_k_sparse or int(os.getenv("TOP_K_SPARSE", "5"))
         self.top_k_dense = top_k_dense or int(os.getenv("TOP_K_DENSE", "5"))
         self.rrf_k = rrf_k or int(os.getenv("RRF_K", "60"))
@@ -55,10 +75,16 @@ class HybridRAGPipeline:
 
         # Initialize Sub-Components
         self.chunker = TextChunker(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-        self.embedder = GeminiEmbedder(api_key=self.api_key, model=self.embedding_model)
-        self.vector_store = SimpleVectorStore()
         self.bm25_retriever = BM25Retriever()
         self.reranker = CrossEncoderReranker(api_key=self.api_key, model=self.llm_model)
+
+        # Initialize embedding backend
+        if self.embedding_backend == "vintern":
+            self.embedder = VinternEmbedder()
+            self.vector_store = MultiVectorStore()
+        else:
+            self.embedder = GeminiEmbedder(api_key=self.api_key, model=self.embedding_model)
+            self.vector_store = SimpleVectorStore()
 
         if genai is None:
             raise ImportError("Please install `google-genai` first.")

@@ -15,8 +15,15 @@ from rag.pipeline import HybridRAGPipeline
 
 
 def print_banner():
+    backend = os.getenv("EMBEDDING_BACKEND", "vintern").lower()
+    if backend == "vintern":
+        backend_label = "🧠 Vintern-Embedding-1B (Local Multi-Vector)"
+    else:
+        backend_label = "☁️  Gemini Embedding API (Cloud Single-Vector)"
+
     print("=" * 68)
     print("        🚀 HYBRID SEARCH RAG SYSTEM (BM25 + Dense + RRF + Reranker)")
+    print(f"        Dense Backend: {backend_label}")
     print("=" * 68)
 
 
@@ -44,7 +51,7 @@ def display_results(result: dict, debug: bool = False):
         print("\n[Stage 2: Dense Vector Search (Top Semantic Matches)]")
         for rank, (chunk, score) in enumerate(result["dense_results"], start=1):
             snippet = chunk.text[:90].replace("\n", " ") + "..."
-            print(f"  {rank}. [Cosine: {score:.4f}] ({chunk.id}) {snippet}")
+            print(f"  {rank}. [Score: {score:.4f}] ({chunk.id}) {snippet}")
 
         print("\n[Stage 3: Reciprocal Rank Fusion (RRF Candidates)]")
         for rank, fused in enumerate(result["fused_results"][:5], start=1):
@@ -89,6 +96,13 @@ def main():
         help="Show intermediate retrieval details: BM25, Dense, RRF, and Cross-Encoder scores",
     )
     parser.add_argument(
+        "--backend",
+        type=str,
+        choices=["vintern", "gemini"],
+        default=None,
+        help="Override embedding backend (default: from EMBEDDING_BACKEND env var)",
+    )
+    parser.add_argument(
         "--top-k-sparse",
         type=int,
         default=None,
@@ -109,6 +123,10 @@ def main():
 
     args = parser.parse_args()
 
+    # Allow CLI to override the embedding backend
+    if args.backend:
+        os.environ["EMBEDDING_BACKEND"] = args.backend
+
     print_banner()
     check_api_key()
 
@@ -118,6 +136,7 @@ def main():
             top_k_sparse=args.top_k_sparse,
             top_k_dense=args.top_k_dense,
             top_n_rerank=args.top_n,
+            embedding_backend=args.backend,
         )
         pipeline.index_document(args.data)
         print(f"✅ Indexed {len(pipeline.indexed_chunks)} chunks into BM25 & Vector Store successfully!\n")

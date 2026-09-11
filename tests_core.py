@@ -1,7 +1,9 @@
 import unittest
 import numpy as np
+import torch
 from rag.chunker import TextChunker, Chunk
 from rag.vector_store import SimpleVectorStore
+from rag.multi_vector_store import MultiVectorStore
 from rag.bm25_retriever import BM25Retriever, tokenize
 from rag.fusion import reciprocal_rank_fusion
 from rag.reranker import CrossEncoderReranker
@@ -44,6 +46,75 @@ class TestHybridRAGCore(unittest.TestCase):
         top_chunk, score = results[0]
         self.assertEqual(top_chunk.id, "c2")
         self.assertGreater(score, 0.9)
+
+    def test_multi_vector_store_maxsim(self):
+        """Tests ColBERT-style MaxSim retrieval with synthetic multi-vector embeddings."""
+        store = MultiVectorStore()
+        chunks = [
+            Chunk(id="mv1", text="Machine learning and artificial intelligence"),
+            Chunk(id="mv2", text="Deep space exploration and rocketry"),
+            Chunk(id="mv3", text="Cooking delicious Italian pasta"),
+        ]
+
+        # Create synthetic multi-vector embeddings (each doc has 3 tokens, dim=4)
+        # mv1: tokens point along x-axis (AI/ML domain)
+        emb1 = torch.tensor([
+            [0.9, 0.1, 0.0, 0.0],
+            [0.8, 0.2, 0.0, 0.0],
+            [0.7, 0.3, 0.0, 0.0],
+        ], dtype=torch.float32)
+
+        # mv2: tokens point along y-axis (space domain)
+        emb2 = torch.tensor([
+            [0.0, 0.9, 0.1, 0.0],
+            [0.0, 0.8, 0.2, 0.0],
+            [0.1, 0.7, 0.2, 0.0],
+        ], dtype=torch.float32)
+
+        # mv3: tokens point along z-axis (cooking domain)
+        emb3 = torch.tensor([
+            [0.0, 0.0, 0.9, 0.1],
+            [0.0, 0.0, 0.8, 0.2],
+            [0.0, 0.1, 0.7, 0.2],
+        ], dtype=torch.float32)
+
+        store.add_chunks(chunks, [emb1, emb2, emb3])
+
+        # Query with tokens pointing toward y-axis (space domain) → should match mv2
+        query_emb = torch.tensor([
+            [0.05, 0.95, 0.0, 0.0],
+            [0.0, 0.85, 0.15, 0.0],
+        ], dtype=torch.float32)
+
+        results = store.similarity_search(query_emb, top_k=3)
+
+        self.assertEqual(len(results), 3)
+        # mv2 (space) should be the top result
+        self.assertEqual(results[0][0].id, "mv2")
+        # MaxSim score should be positive
+        self.assertGreater(results[0][1], 0.0)
+        # mv2 should score higher than mv1 and mv3
+        self.assertGreater(results[0][1], results[1][1])
+        self.assertGreater(results[0][1], results[2][1])
+
+    def test_multi_vector_store_empty(self):
+        """Tests that empty MultiVectorStore returns no results."""
+        store = MultiVectorStore()
+        query_emb = torch.tensor([[1.0, 0.0, 0.0]], dtype=torch.float32)
+        results = store.similarity_search(query_emb, top_k=5)
+        self.assertEqual(len(results), 0)
+
+    def test_multi_vector_store_clear(self):
+        """Tests that clearing the MultiVectorStore removes all data."""
+        store = MultiVectorStore()
+        chunks = [Chunk(id="c1", text="test")]
+        embs = [torch.tensor([[1.0, 0.0]], dtype=torch.float32)]
+        store.add_chunks(chunks, embs)
+        self.assertEqual(len(store.chunks), 1)
+
+        store.clear()
+        self.assertEqual(len(store.chunks), 0)
+        self.assertEqual(len(store.embeddings), 0)
 
     def test_bm25_retriever_exact_match(self):
         retriever = BM25Retriever()
