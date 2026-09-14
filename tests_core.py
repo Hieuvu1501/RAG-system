@@ -7,6 +7,7 @@ from rag.multi_vector_store import MultiVectorStore
 from rag.bm25_retriever import BM25Retriever, tokenize
 from rag.fusion import reciprocal_rank_fusion
 from rag.reranker import CrossEncoderReranker
+from rag.evaluator import RAGTriadEvaluator, TriadResult, _extract_score, _clamp
 
 
 class TestHybridRAGCore(unittest.TestCase):
@@ -167,6 +168,74 @@ class TestHybridRAGCore(unittest.TestCase):
         reranked = reranker.rerank("any query", candidates, top_n=2)
         self.assertEqual(len(reranked), 2)
         self.assertEqual(reranked[0].chunk.id, "c1")
+
+
+class TestRAGTriadEvaluator(unittest.TestCase):
+
+    def test_clamp(self):
+        self.assertEqual(_clamp(1.5), 1.0)
+        self.assertEqual(_clamp(-0.3), 0.0)
+        self.assertAlmostEqual(_clamp(0.75), 0.75)
+
+    def test_extract_score_json(self):
+        # Standard JSON format
+        self.assertAlmostEqual(_extract_score('{"score": 0.87}'), 0.87)
+        self.assertAlmostEqual(_extract_score('{"score": "0.92"}'), 0.92)
+
+    def test_extract_score_bare_float(self):
+        # Fallback: bare float anywhere in text
+        self.assertAlmostEqual(_extract_score("The relevance score is 0.65."), 0.65)
+        self.assertAlmostEqual(_extract_score("Score: 1"), 1.0)
+
+    def test_extract_score_clamps_over_range(self):
+        # Values exceeding [0,1] should be clamped
+        self.assertEqual(_extract_score('{"score": 1.5}'), 1.0)
+        self.assertEqual(_extract_score('{"score": -0.2}'), 0.0)
+
+    def test_extract_score_invalid_returns_fallback(self):
+        # Non-parseable text returns fallback
+        result = _extract_score("I cannot determine a score here.", fallback=0.5)
+        self.assertEqual(result, 0.5)
+
+    def test_evaluator_fallback_without_api_key(self):
+        # Pass api_key="" to explicitly disable the client (avoids reading GEMINI_API_KEY from env).
+        # All scoring methods should return the neutral 0.5 fallback.
+        evaluator = RAGTriadEvaluator(api_key="")
+        self.assertIsNone(evaluator.client)  # client must not be created
+        result = evaluator.evaluate(
+            query="What is photosynthesis?",
+            context_chunks=["Plants use sunlight to synthesize food."],
+            answer="Photosynthesis is the process by which plants use sunlight.",
+        )
+        self.assertIsInstance(result, TriadResult)
+        self.assertAlmostEqual(result.context_relevance, 0.5)
+        self.assertAlmostEqual(result.groundedness, 0.5)
+        self.assertAlmostEqual(result.answer_relevance, 0.5)
+        self.assertAlmostEqual(result.composite, 0.5)
+
+    def test_triad_result_to_dict(self):
+        result = TriadResult(
+            context_relevance=0.87,
+            groundedness=0.95,
+            answer_relevance=0.90,
+            composite=0.9067,
+        )
+        d = result.to_dict()
+        self.assertIn("context_relevance", d)
+        self.assertIn("groundedness", d)
+        self.assertIn("answer_relevance", d)
+        self.assertIn("composite", d)
+        self.assertAlmostEqual(d["context_relevance"], 0.87)
+        self.assertAlmostEqual(d["composite"], 0.9067)
+
+    def test_composite_is_mean_of_three(self):
+        result = TriadResult(
+            context_relevance=0.6,
+            groundedness=0.8,
+            answer_relevance=1.0,
+            composite=(0.6 + 0.8 + 1.0) / 3,
+        )
+        self.assertAlmostEqual(result.composite, 0.8)
 
 
 if __name__ == "__main__":

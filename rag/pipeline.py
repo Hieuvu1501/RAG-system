@@ -12,6 +12,7 @@ from rag.multi_vector_store import MultiVectorStore
 from rag.bm25_retriever import BM25Retriever
 from rag.fusion import reciprocal_rank_fusion, FusedResult
 from rag.reranker import CrossEncoderReranker, RerankedResult
+from rag.evaluator import RAGTriadEvaluator, TriadResult
 
 try:
     from google import genai
@@ -77,6 +78,10 @@ class HybridRAGPipeline:
         self.chunker = TextChunker(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
         self.bm25_retriever = BM25Retriever()
         self.reranker = CrossEncoderReranker(api_key=self.api_key, model=self.llm_model)
+
+        # TruLens RAG Triad Evaluator
+        self.enable_triad_eval = os.getenv("ENABLE_TRIAD_EVAL", "true").lower() not in ("false", "0", "no")
+        self.evaluator = RAGTriadEvaluator(api_key=self.api_key) if self.enable_triad_eval else None
 
         # Initialize embedding backend
         if self.embedding_backend == "vintern":
@@ -219,7 +224,18 @@ Grounded Answer:"""
 
         answer = self.generate_answer(question, retrieval_data["top_chunks"])
 
+        # TruLens RAG Triad evaluation
+        triad_scores = None
+        if self.enable_triad_eval and self.evaluator is not None:
+            context_texts = [c.text for c in retrieval_data["top_chunks"]]
+            triad_scores = self.evaluator.evaluate(
+                query=question,
+                context_chunks=context_texts,
+                answer=answer,
+            )
+
         return {
             **retrieval_data,
             "answer": answer,
+            "triad_scores": triad_scores,
         }

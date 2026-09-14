@@ -1,7 +1,7 @@
 """
 Hybrid Search RAG (Retrieval-Augmented Generation) package.
 Integrates BM25 Sparse Search, Dense Vector Search, Reciprocal Rank Fusion (RRF),
-Cross-Encoder Reranking, and LLM Synthesis.
+Cross-Encoder Reranking, LLM Synthesis, and TruLens RAG Triad Evaluation.
 
 Supports two dense embedding backends:
 - Vintern-Embedding-1B (local, multi-vector ColBERT-style)
@@ -16,6 +16,7 @@ from rag.multi_vector_store import MultiVectorStore
 from rag.bm25_retriever import BM25Retriever
 from rag.fusion import reciprocal_rank_fusion
 from rag.reranker import CrossEncoderReranker
+from rag.evaluator import RAGTriadEvaluator, TriadResult
 from rag.pipeline import HybridRAGPipeline
 
 __all__ = [
@@ -28,5 +29,7 @@ __all__ = [
     "BM25Retriever",
     "reciprocal_rank_fusion",
     "CrossEncoderReranker",
+    "RAGTriadEvaluator",
+    "TriadResult",
     "HybridRAGPipeline",
 ]

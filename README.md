@@ -29,6 +29,12 @@ A modular, production-grade implementation of a **Hybrid Search Retrieval-Augmen
                          │
                          ▼
                   [LLM Synthesis]
+                         │
+                         ▼
+          ┌──────────────┼──────────────┐
+          ▼              ▼              ▼
+  Context Relevance  Groundedness  Answer Relevance
+   [TruLens RAG Triad Evaluation]
 ```
 
 ### Why Hybrid Search?
@@ -80,6 +86,8 @@ Configure your settings in `.env` (or copy from `.env.example`):
 | `TOP_K_DENSE` | `5` | Number of semantic chunks to retrieve via Vector Store |
 | `RRF_K` | `60` | Reciprocal Rank Fusion smoothing constant |
 | `TOP_N_RERANK` | `3` | Number of best chunks passed to LLM synthesis |
+| `ENABLE_TRIAD_EVAL` | `true` | Enable/disable TruLens RAG Triad evaluation after each query |
+| `TRIAD_EVAL_MODEL` | `gemini-3.6-flash` | Gemini model used as LLM-as-a-Judge for triad scoring |
 
 ---
 
@@ -168,3 +176,46 @@ When running with `--debug`, the CLI outputs each stage of the pipeline:
 3. **Stage 3: Reciprocal Rank Fusion (RRF)** — Shows the fused score and individual retriever ranks for each candidate chunk.
 4. **Stage 4: Cross-Encoder Reranker** — Evaluates deep query-document relevance (scored out of 10.0) and re-orders candidates.
 5. **Stage 5: Grounded Answer** — Synthesizes a factual response based strictly on the top reranked chunks.
+6. **📊 TruLens RAG Triad** — Automatically evaluates the response quality with three metrics.
+
+---
+
+## 📊 TruLens RAG Triad Evaluation
+
+Every response is automatically evaluated using the **TruLens RAG Triad** — an LLM-as-a-Judge methodology that detects hallucinations and assesses quality across three dimensions:
+
+| Metric | What it measures | Failure mode |
+| :--- | :--- | :--- |
+| **Context Relevance** | Are the retrieved chunks relevant to the query? | Retrieval noise / off-topic chunks |
+| **Groundedness** | Is every claim in the answer supported by the context? | LLM hallucination |
+| **Answer Relevance** | Does the answer directly address the user's question? | Vague or off-topic generation |
+
+Scores are in **[0.0, 1.0]**. A **Composite Score** is the mean of all three.
+
+### Example Output
+
+```
+📊 TruLens RAG Triad Evaluation
+──────────────────────────────────────────────────
+  Context Relevance:  0.87  █████████░  ✅
+  Groundedness:       0.95  █████████▌  ✅
+  Answer Relevance:   0.90  █████████   ✅
+  ──────────────────────────────────────────────
+  Composite Score:    0.91  █████████░
+──────────────────────────────────────────────────
+```
+
+### Interpretation Guide
+
+| Score Range | Status | Meaning |
+| :--- | :--- | :--- |
+| ≥ 0.80 | ✅ Pass | High quality, low hallucination risk |
+| 0.50 – 0.79 | ⚠️ Warning | Investigate retrieval or generation quality |
+| < 0.50 | ❌ Fail | High risk of hallucination or irrelevant output |
+
+### Disabling Evaluation
+
+To skip the triad evaluation for faster responses, set in `.env`:
+```env
+ENABLE_TRIAD_EVAL=false
+```

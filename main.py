@@ -73,6 +73,31 @@ def display_results(result: dict, debug: bool = False):
         print(f"\n[Sources used: {len(result['top_chunks'])} reranked chunks from hybrid fusion]")
         for i, c in enumerate(result["top_chunks"], start=1):
             print(f"  • [{i}] {c.id}")
+
+    # TruLens RAG Triad Score Card
+    triad = result.get("triad_scores")
+    if triad is not None:
+        print("\n📊 TruLens RAG Triad Evaluation")
+        print("─" * 50)
+
+        def bar(score: float) -> str:
+            filled = round(score * 10)
+            return "█" * filled + "░" * (10 - filled)
+
+        def label(score: float) -> str:
+            if score >= 0.8:
+                return "✅"
+            elif score >= 0.5:
+                return "⚠️ "
+            else:
+                return "❌"
+
+        print(f"  Context Relevance:  {triad.context_relevance:.2f}  {bar(triad.context_relevance)}  {label(triad.context_relevance)}")
+        print(f"  Groundedness:       {triad.groundedness:.2f}  {bar(triad.groundedness)}  {label(triad.groundedness)}")
+        print(f"  Answer Relevance:   {triad.answer_relevance:.2f}  {bar(triad.answer_relevance)}  {label(triad.answer_relevance)}")
+        print("  " + "─" * 46)
+        print(f"  Composite Score:    {triad.composite:.2f}  {bar(triad.composite)}")
+        print("─" * 50)
     print()
 
 
