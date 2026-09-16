@@ -1,221 +1,32 @@
-# 🚀 Hybrid Search RAG System
+# RAG Demos
 
-A modular, production-grade implementation of a **Hybrid Search Retrieval-Augmented Generation (RAG)** pipeline combining **BM25 Sparse Retrieval**, **Dense Vector Retrieval**, **Reciprocal Rank Fusion (RRF)**, **Cross-Encoder Reranking**, and **Gemini LLM Synthesis**.
+Three progressively more advanced Retrieval-Augmented Generation demos, each in its own self-contained folder (own `requirements.txt`, `.env.example`, and `README.md`). All three answer questions over the same sample knowledge base (`data/knowledge.txt` — Project Apollo & the AGC-1969 guidance computer) so you can compare them directly, and all three use Google Gemini as the LLM.
 
----
+| Folder | What it demonstrates |
+| :--- | :--- |
+| [`basic-rag/`](basic-rag) | The minimal RAG pipeline: chunk → embed → cosine-similarity retrieve → generate. Start here. |
+| [`hybrid-search-rag/`](hybrid-search-rag) | Production-style hybrid retrieval: **BM25L** sparse search + dense vector search (with a **ColBERT-style** MaxSim multi-vector backend) fused with **Reciprocal Rank Fusion (RRF)**, then **cross-encoder reranking**, then a **TruLens RAG Triad** evaluator (Context Relevance / Groundedness / Answer Relevance) scoring every answer. |
+| [`lightrag/`](lightrag) | [LightRAG](https://github.com/HKUDS/LightRAG): graph-based RAG that extracts entities/relationships into a knowledge graph at indexing time, then retrieves via graph traversal + vector search (`naive`/`local`/`global`/`hybrid` modes). |
 
-## 🏛 Architecture Diagram
+## Quickstart
 
-```
-                     User Query
-                         │
-             ┌───────────┴───────────┐
-             ▼                       ▼
-    [BM25 Sparse Retriever]   [Dense Vector Retriever]
-       (Inverted Index)        (Vector DB / Embedding)
-             │                       │
-             ▼                       ▼
-    Top-K Lexical Chunks      Top-K Semantic Chunks
-             │                       │
-             └───────────┬───────────┘
-                         ▼
-              [Rank Fusion (ex: RRF)]
-                         │
-                         ▼
-              [Cross-Encoder Reranker]
-                         │
-                         ▼
-                 Top-N Best Chunks
-                         │
-                         ▼
-                  [LLM Synthesis]
-                         │
-                         ▼
-          ┌──────────────┼──────────────┐
-          ▼              ▼              ▼
-  Context Relevance  Groundedness  Answer Relevance
-   [TruLens RAG Triad Evaluation]
-```
+Each folder is independent — `cd` into it, install its own dependencies, and run:
 
-### Why Hybrid Search?
-- **Dense Vector Search** captures conceptual similarity and semantic meaning, but can struggle with exact serial numbers, technical acronyms, or rare keywords.
-- **BM25 Sparse Search** excels at exact keyword matching, technical codes (`AGC-1969`, `SA-506`), numbers, and proper nouns.
-- **Reciprocal Rank Fusion (RRF)** merges and normalizes ranked results from both sparse and dense retrievers without arbitrary score scaling:
-  $$RRF\_Score(d) = \sum_{r \in \{\text{Dense}, \text{Sparse}\}} \frac{1}{k + \text{rank}_r(d)}$$
-- **Cross-Encoder Reranker** scores full query-document cross-attention pairs (0.00 – 10.00 scale) to select the true top-$N$ most informative passages.
-- **LLM Synthesis** generates the final answer grounded strictly in the top reranked context with zero hallucinations.
-
----
-
-## 📂 Project Structure
-
-```
-/Users/bill/code/
-├── .env.example          # Environment configuration template
-├── .env                  # Active environment file (GEMINI_API_KEY & model options)
-├── requirements.txt      # Project dependencies (google-genai, rank-bm25, numpy, python-dotenv)
-├── data/
-│   ├── knowledge.txt     # Technical knowledge base on Project Apollo & AGC-1969
-│   └── example1.txt      # Googlecar vehicle manual dataset
-├── rag/
-│   ├── __init__.py       # Package exports
-│   ├── chunker.py        # TextChunker (paragraph, sliding window & code assignments)
-│   ├── embeddings.py     # GeminiEmbedder (gemini-embedding-001 via google-genai)
-│   ├── vector_store.py   # SimpleVectorStore (cosine similarity dense index)
-│   ├── bm25_retriever.py # BM25Retriever (BM25Okapi sparse lexical index)
-│   ├── fusion.py         # Reciprocal Rank Fusion (RRF) algorithm
-│   ├── reranker.py       # CrossEncoderReranker (relevance scoring & top-N filtering)
-│   └── pipeline.py       # HybridRAGPipeline (end-to-end orchestrator)
-├── tests_core.py         # Unit tests (Chunker, BM25, Cosine Similarity, RRF)
-├── main.py               # Interactive CLI runner with debug output
-└── README.md             # Documentation
-```
-
----
-
-## ⚙️ Configuration (`.env`)
-
-Configure your settings in `.env` (or copy from `.env.example`):
-
-| Variable | Default | Description |
-| :--- | :--- | :--- |
-| `GEMINI_API_KEY` | *(required)* | Google Gemini API key ([Get one from Google AI Studio](https://aistudio.google.com/)) |
-| `LLM_MODEL` | `gemini-3.6-flash` | Gemini model for cross-encoder reranking & synthesis |
-| `EMBEDDING_MODEL` | `gemini-embedding-001` | Embedding model for dense vector search |
-| `TOP_K_SPARSE` | `5` | Number of lexical chunks to retrieve via BM25 |
-| `TOP_K_DENSE` | `5` | Number of semantic chunks to retrieve via Vector Store |
-| `RRF_K` | `60` | Reciprocal Rank Fusion smoothing constant |
-| `TOP_N_RERANK` | `3` | Number of best chunks passed to LLM synthesis |
-| `ENABLE_TRIAD_EVAL` | `true` | Enable/disable TruLens RAG Triad evaluation after each query |
-| `TRIAD_EVAL_MODEL` | `gemini-3.6-flash` | Gemini model used as LLM-as-a-Judge for triad scoring |
-
----
-
-## ⚡ Quickstart
-
-### 1. Configure `.env`
-Open [.env](.env) and add your API key:
-```env
-GEMINI_API_KEY=AIzaSy...
-```
-
-### 2. Install Dependencies
 ```bash
+cd basic-rag          # or hybrid-search-rag, or lightrag
+cp .env.example .env   # then add your GEMINI_API_KEY
 pip install -r requirements.txt
+python3 main.py --query "What were the specifications of AGC-1969?"
 ```
 
-### 3. Run Core Verification Tests
-Run the standalone unit tests (verifies BM25, Vector Search, and RRF logic with zero API calls):
-```bash
-python3 -m unittest tests_core.py
-```
+See each folder's own README for full details, configuration options, and example queries.
 
----
+## Why three folders?
 
-## 💬 Usage Examples
+Each demo adds one layer of sophistication on top of the previous one, so you can see exactly what each technique buys you:
 
-### 1. Vehicle Manual Dataset (`data/example1.txt`)
+1. **basic-rag** — a single dense retriever. Fast to understand, but weak on exact keywords/IDs and has no way to judge answer quality.
+2. **hybrid-search-rag** — adds a sparse lexical retriever (BM25L) alongside the dense one, fuses their rankings (RRF), reranks with a cross-encoder, and grades every answer with an LLM-as-judge triad (TruLens-style).
+3. **lightrag** — replaces flat chunk retrieval with a knowledge graph, so multi-hop questions that connect several entities/facts can be answered more reliably.
 
-**Ask a question with stage-by-stage debug view:**
-```bash
-python3 main.py --data data/example1.txt --query "How do I defrost the windshield in my Googlecar?" --debug
-```
-
-**Ask about touchscreen navigation & music:**
-```bash
-python3 main.py --data data/example1.txt --query "How do I play music or get directions using the touchscreen?" --debug
-```
-
-**Ask about gear shifting in slippery conditions:**
-```bash
-python3 main.py --data data/example1.txt --query "What gear position should I use for driving in snow?" --debug
-```
-
-**Interactive chat mode on `data/example1.txt`:**
-```bash
-python3 main.py --data data/example1.txt
-```
-
----
-
-### 2. Apollo Knowledge Base (`data/knowledge.txt`)
-
-**Query exact technical specifications:**
-```bash
-python3 main.py --query "What were the specifications of AGC-1969?" --debug
-```
-
-**Interactive chat session:**
-```bash
-python3 main.py
-```
-
----
-
-### 3. Custom Retrieval Parameters
-
-Tune retrieval depths directly via CLI flags:
-```bash
-python3 main.py \
-  --data data/knowledge.txt \
-  --query "Who walked on the Moon during Apollo 11?" \
-  --top-k-sparse 8 \
-  --top-k-dense 8 \
-  --top-n 4 \
-  --debug
-```
-
----
-
-## 🔍 Understanding the Pipeline Stages (`--debug`)
-
-When running with `--debug`, the CLI outputs each stage of the pipeline:
-
-1. **Stage 1: BM25 Sparse Search** — Displays the top lexical matches scored by BM25Okapi.
-2. **Stage 2: Dense Vector Search** — Displays the top semantic matches scored by Cosine Similarity.
-3. **Stage 3: Reciprocal Rank Fusion (RRF)** — Shows the fused score and individual retriever ranks for each candidate chunk.
-4. **Stage 4: Cross-Encoder Reranker** — Evaluates deep query-document relevance (scored out of 10.0) and re-orders candidates.
-5. **Stage 5: Grounded Answer** — Synthesizes a factual response based strictly on the top reranked chunks.
-6. **📊 TruLens RAG Triad** — Automatically evaluates the response quality with three metrics.
-
----
-
-## 📊 TruLens RAG Triad Evaluation
-
-Every response is automatically evaluated using the **TruLens RAG Triad** — an LLM-as-a-Judge methodology that detects hallucinations and assesses quality across three dimensions:
-
-| Metric | What it measures | Failure mode |
-| :--- | :--- | :--- |
-| **Context Relevance** | Are the retrieved chunks relevant to the query? | Retrieval noise / off-topic chunks |
-| **Groundedness** | Is every claim in the answer supported by the context? | LLM hallucination |
-| **Answer Relevance** | Does the answer directly address the user's question? | Vague or off-topic generation |
-
-Scores are in **[0.0, 1.0]**. A **Composite Score** is the mean of all three.
-
-### Example Output
-
-```
-📊 TruLens RAG Triad Evaluation
-──────────────────────────────────────────────────
-  Context Relevance:  0.87  █████████░  ✅
-  Groundedness:       0.95  █████████▌  ✅
-  Answer Relevance:   0.90  █████████   ✅
-  ──────────────────────────────────────────────
-  Composite Score:    0.91  █████████░
-──────────────────────────────────────────────────
-```
-
-### Interpretation Guide
-
-| Score Range | Status | Meaning |
-| :--- | :--- | :--- |
-| ≥ 0.80 | ✅ Pass | High quality, low hallucination risk |
-| 0.50 – 0.79 | ⚠️ Warning | Investigate retrieval or generation quality |
-| < 0.50 | ❌ Fail | High risk of hallucination or irrelevant output |
-
-### Disabling Evaluation
-
-To skip the triad evaluation for faster responses, set in `.env`:
-```env
-ENABLE_TRIAD_EVAL=false
-```
+None of the three share code — each is meant to be read end-to-end on its own.

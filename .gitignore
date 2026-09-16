@@ -16,3 +16,6 @@ __pycache__/
 
 # Hệ điều hành Mac
 .DS_Store
+
+# LightRAG local knowledge-graph / vector storage
+lightrag/rag_storage/

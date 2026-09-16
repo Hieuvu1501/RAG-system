@@ -5,9 +5,9 @@ from collections import Counter
 from rag.chunker import Chunk
 
 try:
-    from rank_bm25 import BM25Okapi
+    from rank_bm25 import BM25L
 except ImportError:
-    BM25Okapi = None
+    BM25L = None
 
 
 def tokenize(text: str) -> List[str]:
@@ -20,15 +20,20 @@ def tokenize(text: str) -> List[str]:
     return tokens
 
 
-class PurePythonBM25Okapi:
+class PurePythonBM25L:
     """
-    Fallback pure-Python BM25Okapi implementation in case `rank_bm25`
+    Fallback pure-Python BM25L implementation in case `rank_bm25`
     is not installed. Guarantees 100% test reliability with zero external dependencies.
+
+    BM25L (Lv & Zhai, 2011) fixes BM25Okapi's bias against long documents by adding
+    a length-normalized pseudo-frequency `ctd` and a free `delta` parameter, so long
+    but genuinely relevant chunks are not unfairly penalized.
     """
 
-    def __init__(self, corpus: List[List[str]], k1: float = 1.5, b: float = 0.75):
+    def __init__(self, corpus: List[List[str]], k1: float = 1.5, b: float = 0.75, delta: float = 0.5):
         self.k1 = k1
         self.b = b
+        self.delta = delta
         self.corpus_size = len(corpus)
         self.doc_lengths = [len(doc) for doc in corpus]
         self.avgdl = sum(self.doc_lengths) / max(1, self.corpus_size)
@@ -42,8 +47,8 @@ class PurePythonBM25Okapi:
 
         self.idf = {}
         for term, freq in self.df.items():
-            # Standard Lucene/BM25 IDF formula with smoothing
-            self.idf[term] = math.log(1 + (self.corpus_size - freq + 0.5) / (freq + 0.5))
+            # BM25L IDF: log((N + 1) / (df + 0.5)), always non-negative
+            self.idf[term] = math.log(self.corpus_size + 1) - math.log(freq + 0.5)
 
     def get_scores(self, query_tokens: List[str]) -> List[float]:
         scores = [0.0] * self.corpus_size
@@ -56,21 +61,25 @@ class PurePythonBM25Okapi:
                 if tf == 0:
                     continue
                 doc_len = self.doc_lengths[idx]
-                numerator = tf * (self.k1 + 1)
-                denominator = tf + self.k1 * (1 - self.b + self.b * (doc_len / max(1, self.avgdl)))
-                scores[idx] += idf * (numerator / denominator)
+                ctd = tf / (1 - self.b + self.b * (doc_len / max(1, self.avgdl)))
+                scores[idx] += idf * (self.k1 + 1) * (ctd + self.delta) / (self.k1 + ctd + self.delta)
         return scores
 
 
 class BM25Retriever:
     """
-    Sparse Lexical Retriever using BM25Okapi inverted indexing.
+    Sparse Lexical Retriever using BM25L inverted indexing.
     Ideal for exact keyword matches, technical codes, dates, and identifiers.
+
+    BM25L improves on the classic BM25Okapi by correcting its systematic bias
+    towards short documents, via a length-normalized pseudo-tf and a `delta`
+    lower-bound term (Lv & Zhai, "When Documents Are Very Long, BM25 Fails!", 2011).
     """
 
-    def __init__(self, k1: float = 1.5, b: float = 0.75):
+    def __init__(self, k1: float = 1.5, b: float = 0.75, delta: float = 0.5):
         self.k1 = k1
         self.b = b
+        self.delta = delta
         self.chunks: List[Chunk] = []
         self.tokenized_corpus: List[List[str]] = []
         self.bm25 = None
@@ -86,10 +95,10 @@ class BM25Retriever:
             self.bm25 = None
             return
 
-        if BM25Okapi is not None:
-            self.bm25 = BM25Okapi(self.tokenized_corpus, k1=self.k1, b=self.b)
+        if BM25L is not None:
+            self.bm25 = BM25L(self.tokenized_corpus, k1=self.k1, b=self.b, delta=self.delta)
         else:
-            self.bm25 = PurePythonBM25Okapi(self.tokenized_corpus, k1=self.k1, b=self.b)
+            self.bm25 = PurePythonBM25L(self.tokenized_corpus, k1=self.k1, b=self.b, delta=self.delta)
 
     def search(self, query: str, top_k: int = 5) -> List[Tuple[Chunk, float]]:
         """
