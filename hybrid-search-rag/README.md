@@ -118,7 +118,7 @@ pip install -r requirements.txt
 ### 3. Run Core Verification Tests
 Run the standalone unit tests (verifies BM25, Vector Search, and RRF logic with zero API calls):
 ```bash
-python3 -m unittest tests_core.py
+.venv/bin/python -m unittest tests_core.py
 ```
 
 ---
@@ -129,22 +129,22 @@ python3 -m unittest tests_core.py
 
 **Ask a question with stage-by-stage debug view:**
 ```bash
-python3 main.py --data data/example1.txt --query "How do I defrost the windshield in my Googlecar?" --debug
+.venv/bin/python main.py --data data/example1.txt --query "How do I defrost the windshield in my Googlecar?" --debug
 ```
 
 **Ask about touchscreen navigation & music:**
 ```bash
-python3 main.py --data data/example1.txt --query "How do I play music or get directions using the touchscreen?" --debug
+.venv/bin/python main.py --data data/example1.txt --query "How do I play music or get directions using the touchscreen?" --debug
 ```
 
 **Ask about gear shifting in slippery conditions:**
 ```bash
-python3 main.py --data data/example1.txt --query "What gear position should I use for driving in snow?" --debug
+.venv/bin/python main.py --data data/example1.txt --query "What gear position should I use for driving in snow?" --debug
 ```
 
 **Interactive chat mode on `data/example1.txt`:**
 ```bash
-python3 main.py --data data/example1.txt
+.venv/bin/python main.py --data data/example1.txt
 ```
 
 ---
@@ -153,12 +153,12 @@ python3 main.py --data data/example1.txt
 
 **Query exact technical specifications:**
 ```bash
-python3 main.py --query "What were the specifications of AGC-1969?" --debug
+.venv/bin/python main.py --query "What were the specifications of AGC-1969?" --debug
 ```
 
 **Interactive chat session:**
 ```bash
-python3 main.py
+.venv/bin/python main.py
 ```
 
 ---
@@ -167,7 +167,7 @@ python3 main.py
 
 Tune retrieval depths directly via CLI flags:
 ```bash
-python3 main.py \
+.venv/bin/python main.py \
   --data data/knowledge.txt \
   --query "Who walked on the Moon during Apollo 11?" \
   --top-k-sparse 8 \

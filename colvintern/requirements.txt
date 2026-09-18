@@ -1,0 +1,18 @@
+torch>=2.0.0
+transformers==4.48.2
+Pillow>=9.0.0
+python-dotenv>=1.0.0
+# Optional: only used for the answer-generation step (VQA on the matched image).
+# Retrieval itself is fully local and works without this / without GEMINI_API_KEY.
+google-genai>=1.0.0
+# Required by ColVintern's custom modeling/processor code (not optional, despite
+# often being listed as such for other HF vision models):
+timm>=1.0.0
+einops>=0.7.0
+# decord: the official PyPI package has no macOS arm64 (Apple Silicon) wheels;
+# use the `eva-decord` fork instead, which provides the same `decord` module.
+decord>=0.6.0; platform_system != "Darwin" or platform_machine != "arm64"
+eva-decord>=0.6.1; platform_system == "Darwin" and platform_machine == "arm64"
+# Optional: flash_attn (for GPU acceleration, requires CUDA - not available on
+# macOS/MPS or CPU-only setups). The model falls back to eager attention without it.
+# pip install flash_attn

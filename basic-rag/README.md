@@ -46,13 +46,13 @@ basic-rag/
 cd basic-rag
 cp .env.example .env        # then add your GEMINI_API_KEY
 pip install -r requirements.txt
-python3 -m unittest tests_core.py     # sanity check, no API calls
-python3 main.py --query "What were the specifications of AGC-1969?" --debug
+.venv/bin/python -m unittest tests_core.py     # sanity check, no API calls
+.venv/bin/python main.py --query "What were the specifications of AGC-1969?" --debug
 ```
 
 Or run interactively:
 ```bash
-python3 main.py
+.venv/bin/python main.py
 ```
 
 ## ⚙️ Configuration (`.env`)

@@ -42,18 +42,18 @@ lightrag/
 cd lightrag
 cp .env.example .env        # then add your GEMINI_API_KEY
 pip install -r requirements.txt
-python3 main.py --query "What were the specifications of AGC-1969?" --mode hybrid
+.venv/bin/python main.py --query "What were the specifications of AGC-1969?" --mode hybrid
 ```
 
 Or run interactively:
 ```bash
-python3 main.py
+.venv/bin/python main.py
 ```
 
 Try comparing modes on the same question:
 ```bash
-python3 main.py --query "How does the AGC relate to the Apollo missions?" --mode naive
-python3 main.py --query "How does the AGC relate to the Apollo missions?" --mode hybrid
+.venv/bin/python main.py --query "How does the AGC relate to the Apollo missions?" --mode naive
+.venv/bin/python main.py --query "How does the AGC relate to the Apollo missions?" --mode hybrid
 ```
 
 ## ⚙️ Configuration (`.env`)

@@ -154,12 +154,21 @@ class VinternEmbedder:
         return list(embeddings)
 
     def _move_to_device(self, batch: dict) -> dict:
-        """Moves a batch dictionary of tensors to the configured device."""
+        """
+        Moves a batch dictionary of tensors to the configured device.
+
+        Per the model's official usage example, `input_ids` stay integer while
+        `pixel_values` and, notably, `attention_mask` are both cast to the model's
+        compute dtype (not left as int) - this model consumes the mask as a
+        multiplicative float weight rather than a boolean/int mask.
+        """
         dtype = torch.bfloat16 if self.device != "cpu" else torch.float32
         moved = {}
         for key, val in batch.items():
             if isinstance(val, torch.Tensor):
-                if val.is_floating_point():
+                if key == "input_ids":
+                    moved[key] = val.to(device=self.device)
+                elif val.is_floating_point() or key == "attention_mask":
                     moved[key] = val.to(device=self.device, dtype=dtype)
                 else:
                     moved[key] = val.to(device=self.device)
